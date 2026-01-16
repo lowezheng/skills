@@ -2,7 +2,7 @@
 
 Install agent skills onto your coding agents from any git repository.
 
-Supports [OpenCode](https://opencode.ai), [Claude Code](https://claude.ai/code), [Codex](https://developers.openai.com/codex), [Cursor](https://cursor.com), [Amp](https://ampcode.com), and [Antigravity](https://antigravity.google).
+Supports [OpenCode](https://opencode.ai), [Claude Code](https://claude.ai/code), [Codex](https://developers.openai.com/codex), [Cursor](https://cursor.com), [Antigravity](https://antigravity.google), [GitHub Copilot](https://github.com/features/copilot), [Amp](https://ampcode.com), and [Roo Code](https://roocode.com).
 
 ## Quick Start
 
@@ -48,6 +48,7 @@ npx add-skill git@github.com:vercel-labs/agent-skills.git
 |--------|-------------|
 | `-g, --global` | Install to user directory instead of project |
 | `-a, --agent <agents...>` | Target specific agents: `opencode`, `claude-code`, `codex`, `cursor`, `amp`, `antigravity` |
+| `-a, --agent <agents...>` | Target specific agents: `opencode`, `claude-code`, `codex`, `cursor`, `antigravity`, `amp`, `github-copilot` |
 | `-s, --skill <skills...>` | Install specific skills by name |
 | `-l, --list` | List available skills without installing |
 | `-y, --yes` | Skip all confirmation prompts |
@@ -89,6 +90,8 @@ Installed in your current working directory. Commit these to share with your tea
 | Cursor | `.cursor/skills/<name>/` |
 | Amp | `.agents/skills/<name>/` |
 | Antigravity | `.agent/skills/<name>/` |
+| GitHub Copilot | `.github/skills/<name>/` |
+| Roo Code | `.roo/skills/<name>/` |
 
 ### Global (`--global`)
 
@@ -102,6 +105,8 @@ Installed in your home directory. Available across all projects.
 | Cursor | `~/.cursor/skills/<name>/` |
 | Amp | `~/.config/agents/skills/<name>/` |
 | Antigravity | `~/.gemini/antigravity/skills/<name>/` |
+| GitHub Copilot | `~/.copilot/skills/<name>/` |
+| Roo Code | `~/.roo/skills/<name>/` |
 
 ## Agent Detection
 
@@ -151,6 +156,8 @@ The CLI searches for skills in these locations within a repository:
 - `.cursor/skills/`
 - `.agents/skills/` (Amp)
 - `.agent/skills/` (Antigravity)
+- `.github/skills/`
+- `.copilot/skills/`
 
 If no skills are found in standard locations, a recursive search is performed.
 
@@ -158,12 +165,12 @@ If no skills are found in standard locations, a recursive search is performed.
 
 Skills are generally compatible across agents since they follow a shared [Agent Skills specification](https://agentskills.io). However, some features may be agent-specific:
 
-| Feature | OpenCode | Claude Code | Codex | Cursor | Amp | Antigravity |
-|---------|----------|-------------|-------|--------|-----|-------------|
-| Basic skills | Yes | Yes | Yes | Yes | Yes | Yes |
-| `allowed-tools` | Yes | Yes | Yes | Yes | Yes | Yes |
-| `context: fork` | No | Yes | No | No | No | No |
-| Hooks | No | Yes | No | No | No | No |
+| Feature | OpenCode | Claude Code | Codex | Cursor | Antigravity | Roo Code | Github Copilot | Amp |
+|---------|----------|-------------|-------|--------|-------------|----------|----------------|-----|
+| Basic skills | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| `allowed-tools` | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| `context: fork` | No | Yes | No | No | No | No | No | No |
+| Hooks | No | Yes | No | No | No | No | No | No |
 
 ## Troubleshooting
 
@@ -191,6 +198,8 @@ Ensure you have write access to the target directory.
 - [Cursor Skills Documentation](https://cursor.com/docs/context/skills)
 - [Amp Skills Documentation](https://ampcode.com/manual#agent-skills)
 - [Antigravity Skills Documentation](https://antigravity.google/docs/skills)
+- [GitHub Copilot Agent Skills](https://docs.github.com/en/copilot/concepts/agents/about-agent-skills)
+- [Roo Code Skills Documentation](https://docs.roocode.com/features/skills)
 
 ## License
 
