@@ -3,9 +3,7 @@
 The CLI for the open agent skills ecosystem.
 
 <!-- agent-list:start -->
-
-Supports **OpenCode**, **Claude Code**, **Codex**, **Cursor**, and [29 more](#supported-agents).
-
+Supports **OpenCode**, **Claude Code**, **Codex**, **Cursor**, and [31 more](#available-agents).
 <!-- agent-list:end -->
 
 ## Install a Skill
@@ -41,7 +39,7 @@ npx skills add ./my-local-skills
 | Option                    | Description                                                                                                                                        |
 | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `-g, --global`            | Install to user directory instead of project                                                                                                       |
-| `-a, --agent <agents...>` | <!-- agent-names:start -->Target specific agents (e.g., `claude-code`, `codex`). See [Available Agents](#supported-agents)<!-- agent-names:end --> |
+| `-a, --agent <agents...>` | <!-- agent-names:start -->Target specific agents (e.g., `claude-code`, `codex`). See [Available Agents](#available-agents)<!-- agent-names:end --> |
 | `-s, --skill <skills...>` | Install specific skills by name (quote multi-word names: `--skill "My Skill"`)                                                                     |
 | `-l, --list`              | List available skills without installing                                                                                                           |
 | `-y, --yes`               | Skip all confirmation prompts                                                                                                                      |
@@ -308,7 +306,6 @@ metadata:
 The CLI searches for skills in these locations within a repository:
 
 <!-- skill-discovery:start -->
-
 - Root directory (if it contains `SKILL.md`)
 - `skills/`
 - `skills/.curated/`
@@ -336,6 +333,7 @@ The CLI searches for skills in these locations within a repository:
 - `.mcpjam/skills/`
 - `.mux/skills/`
 - `.opencode/skills/`
+- `.openclaude/skills/`
 - `.openhands/skills/`
 - `.pi/skills/`
 - `.qoder/skills/`
@@ -344,7 +342,6 @@ The CLI searches for skills in these locations within a repository:
 - `.trae/skills/`
 - `.windsurf/skills/`
 - `.zencoder/skills/`
-- `.openclaude/skills/`
 - `.neovate/skills/`
 - `.pochi/skills/`
 <!-- skill-discovery:end -->
