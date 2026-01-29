@@ -1,5 +1,3 @@
-# v${VERSION}
-
 ## Changelog
 
 ${CHANGELOG}
