@@ -347,12 +347,14 @@ async function runCheck(args: string[] = []): Promise<void> {
   const skillsBySource = new Map<string, Array<{ name: string; entry: SkillLockEntry }>>();
   let skippedCount = 0;
 
+  const isGitSource = (sourceType?: string) =>
+    sourceType === 'github' || sourceType === 'gitlab' || sourceType === 'git';
+
   for (const skillName of skillNames) {
     const entry = lock.skills[skillName];
     if (!entry) continue;
 
-    // Only check GitHub-sourced skills with folder hash
-    if (entry.sourceType !== 'github' || !entry.skillFolderHash || !entry.skillPath) {
+    if (!isGitSource(entry.sourceType) || !entry.skillFolderHash || !entry.skillPath) {
       skippedCount++;
       continue;
     }
@@ -364,7 +366,7 @@ async function runCheck(args: string[] = []): Promise<void> {
 
   const totalSkills = skillNames.length - skippedCount;
   if (totalSkills === 0) {
-    console.log(`${DIM}No GitHub skills to check.${RESET}`);
+    console.log(`${DIM}No git-based skills to check.${RESET}`);
     return;
   }
 
@@ -377,10 +379,16 @@ async function runCheck(args: string[] = []): Promise<void> {
   for (const [source, skills] of skillsBySource) {
     for (const { name, entry } of skills) {
       try {
-        const latestHash = await fetchSkillFolderHash(source, entry.skillPath!, token);
+        const latestHash = await fetchSkillFolderHash(
+          source,
+          entry.skillPath!,
+          token,
+          entry.sourceType,
+          entry.sourceUrl
+        );
 
         if (!latestHash) {
-          errors.push({ name, source, error: 'Could not fetch from GitHub' });
+          errors.push({ name, source, error: 'Could not fetch from repository' });
           continue;
         }
 
@@ -449,19 +457,27 @@ async function runUpdate(): Promise<void> {
   const updates: Array<{ name: string; source: string; entry: SkillLockEntry }> = [];
   let checkedCount = 0;
 
+  const isGitSource = (sourceType?: string) =>
+    sourceType === 'github' || sourceType === 'gitlab' || sourceType === 'git';
+
   for (const skillName of skillNames) {
     const entry = lock.skills[skillName];
     if (!entry) continue;
 
-    // Only check GitHub-sourced skills with folder hash
-    if (entry.sourceType !== 'github' || !entry.skillFolderHash || !entry.skillPath) {
+    if (!isGitSource(entry.sourceType) || !entry.skillFolderHash || !entry.skillPath) {
       continue;
     }
 
     checkedCount++;
 
     try {
-      const latestHash = await fetchSkillFolderHash(entry.source, entry.skillPath, token);
+      const latestHash = await fetchSkillFolderHash(
+        entry.source,
+        entry.skillPath,
+        token,
+        entry.sourceType,
+        entry.sourceUrl
+      );
 
       if (latestHash && latestHash !== entry.skillFolderHash) {
         updates.push({ name: skillName, source: entry.source, entry });
@@ -472,7 +488,7 @@ async function runUpdate(): Promise<void> {
   }
 
   if (checkedCount === 0) {
-    console.log(`${DIM}No skills to check.${RESET}`);
+    console.log(`${DIM}No git-based skills to update.${RESET}`);
     return;
   }
 
@@ -492,11 +508,8 @@ async function runUpdate(): Promise<void> {
   for (const update of updates) {
     console.log(`${TEXT}Updating ${update.name}...${RESET}`);
 
-    // Build the URL with subpath to target the specific skill directory
-    // e.g., https://github.com/owner/repo/tree/main/skills/my-skill
     let installUrl = update.entry.sourceUrl;
     if (update.entry.skillPath) {
-      // Extract the skill folder path (remove /SKILL.md suffix)
       let skillFolder = update.entry.skillPath;
       if (skillFolder.endsWith('/SKILL.md')) {
         skillFolder = skillFolder.slice(0, -9);
@@ -507,10 +520,21 @@ async function runUpdate(): Promise<void> {
         skillFolder = skillFolder.slice(0, -1);
       }
 
-      // Convert git URL to tree URL with path
-      // https://github.com/owner/repo.git -> https://github.com/owner/repo/tree/main/path
-      installUrl = update.entry.sourceUrl.replace(/\.git$/, '').replace(/\/$/, '');
-      installUrl = `${installUrl}/tree/main/${skillFolder}`;
+      installUrl = update.entry.sourceUrl.replace(/\/$/, '');
+
+      if (update.entry.sourceType === 'github') {
+        installUrl = installUrl.replace(/\.git$/, '');
+        installUrl = `${installUrl}/tree/main/${skillFolder}`;
+      } else if (update.entry.sourceType === 'gitlab' || update.entry.sourceType === 'git') {
+        // Only add fragment if skillFolder is not empty (i.e., not root-level skill)
+        if (skillFolder && skillFolder !== '') {
+          installUrl = `${installUrl}#${skillFolder}`;
+          console.log(
+            `${DIM}Note: Using URL fragment for skill path. If this doesn't work, run:${RESET}`
+          );
+          console.log(`  ${DIM}npx skills add ${installUrl} --skill ${skillFolder}${RESET}`);
+        }
+      }
     }
 
     // Use skills CLI to reinstall with -g -y flags

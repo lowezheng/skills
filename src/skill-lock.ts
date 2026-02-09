@@ -3,6 +3,7 @@ import { join, dirname } from 'path';
 import { homedir } from 'os';
 import { createHash } from 'crypto';
 import { execSync } from 'child_process';
+import { spawn } from 'child_process';
 
 const AGENTS_DIR = '.agents';
 const LOCK_FILE = '.skill-lock.json';
@@ -21,9 +22,13 @@ export interface SkillLockEntry {
   /** Subpath within the source repo, if applicable */
   skillPath?: string;
   /**
-   * GitHub tree SHA for the entire skill folder.
-   * This hash changes when ANY file in the skill folder changes.
-   * Fetched via GitHub Trees API by the telemetry server.
+   * Hash for detecting skill updates.
+   * - For GitHub: Tree SHA for the entire skill folder (changes when ANY file in the folder changes)
+   * - For GitLab and Git: Repository-level commit SHA (changes when ANY file in the repo changes)
+   *
+   * Fetched via:
+   * - GitHub: GitHub Trees API
+   * - GitLab and Git: git ls-remote command
    */
   skillFolderHash: string;
   /** ISO timestamp when the skill was first installed */
@@ -148,6 +153,87 @@ export function getGitHubToken(): string | null {
   return null;
 }
 
+function spawnPromise(
+  command: string,
+  args: string[],
+  options: { timeout: number }
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args);
+
+    let stdout = '';
+    let stderr = '';
+    let timer: NodeJS.Timeout;
+
+    child.stdout?.on('data', (data) => {
+      stdout += data.toString();
+    });
+
+    child.stderr?.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    timer = setTimeout(() => {
+      child.kill('SIGTERM');
+      reject(new Error(`Command timeout after ${options.timeout}ms`));
+    }, options.timeout);
+
+    child.on('close', (code) => {
+      clearTimeout(timer);
+      if (code === 0) {
+        resolve(stdout.trim());
+      } else {
+        reject(new Error(`Command failed with code ${code}: ${stderr}`));
+      }
+    });
+
+    child.on('error', (err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
+  });
+}
+
+async function fetchGitRepositoryHash(gitUrl: string): Promise<string | null> {
+  try {
+    const url = new URL(gitUrl);
+    const allowedProtocols = ['http:', 'https:', 'git:', 'ssh:'];
+
+    if (!allowedProtocols.includes(url.protocol)) {
+      return null;
+    }
+
+    const headOutput = await spawnPromise('git', ['ls-remote', gitUrl, 'HEAD'], {
+      timeout: 10000,
+    });
+
+    const match = headOutput.match(/^([a-f0-9]+)\s+HEAD$/);
+    if (match && match[1]) {
+      return match[1];
+    }
+
+    const branches = ['main', 'master'];
+    for (const branch of branches) {
+      try {
+        const branchOutput = await spawnPromise(
+          'git',
+          ['ls-remote', gitUrl, `refs/heads/${branch}`],
+          { timeout: 10000 }
+        );
+
+        const branchMatch = branchOutput.match(/^([a-f0-9]+)/);
+        if (branchMatch && branchMatch[1]) {
+          return branchMatch[1];
+        }
+      } catch {
+        continue;
+      }
+    }
+  } catch {}
+
+  return null;
+}
+
 /**
  * Fetch the tree SHA (folder hash) for a skill folder using GitHub's Trees API.
  * This makes ONE API call to get the entire repo tree, then extracts the SHA
@@ -156,24 +242,33 @@ export function getGitHubToken(): string | null {
  * @param ownerRepo - GitHub owner/repo (e.g., "vercel-labs/agent-skills")
  * @param skillPath - Path to skill folder or SKILL.md (e.g., "skills/react-best-practices/SKILL.md")
  * @param token - Optional GitHub token for authenticated requests (higher rate limits)
+ * @param sourceType - The source type (github, gitlab, git)
+ * @param gitUrl - The git repository URL (for gitlab and git)
  * @returns The tree SHA for the skill folder, or null if not found
  */
+function isGitBasedType(sourceType?: string): boolean {
+  return sourceType === 'git' || sourceType === 'gitlab';
+}
+
 export async function fetchSkillFolderHash(
   ownerRepo: string,
   skillPath: string,
-  token?: string | null
+  token?: string | null,
+  sourceType?: string,
+  gitUrl?: string
 ): Promise<string | null> {
-  // Normalize to forward slashes first (for GitHub API compatibility)
+  if (isGitBasedType(sourceType) && gitUrl) {
+    return await fetchGitRepositoryHash(gitUrl);
+  }
+
   let folderPath = skillPath.replace(/\\/g, '/');
 
-  // Remove SKILL.md suffix to get folder path
   if (folderPath.endsWith('/SKILL.md')) {
     folderPath = folderPath.slice(0, -9);
   } else if (folderPath.endsWith('SKILL.md')) {
     folderPath = folderPath.slice(0, -8);
   }
 
-  // Remove trailing slash
   if (folderPath.endsWith('/')) {
     folderPath = folderPath.slice(0, -1);
   }
@@ -200,12 +295,10 @@ export async function fetchSkillFolderHash(
         tree: Array<{ path: string; type: string; sha: string }>;
       };
 
-      // If folderPath is empty, this is a root-level skill - use the root tree SHA
       if (!folderPath) {
         return data.sha;
       }
 
-      // Find the tree entry for the skill folder
       const folderEntry = data.tree.find(
         (entry) => entry.type === 'tree' && entry.path === folderPath
       );

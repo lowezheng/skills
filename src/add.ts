@@ -601,10 +601,19 @@ async function handleRemoteSkill(
   // Add to skill lock file for update tracking (only for global installs)
   if (successful.length > 0 && installGlobally) {
     try {
-      // Try to fetch the folder hash from GitHub Trees API
       let skillFolderHash = '';
-      if (remoteSkill.providerId === 'github') {
-        const hash = await fetchSkillFolderHash(remoteSkill.sourceIdentifier, url);
+      const isGitSource =
+        remoteSkill.providerId === 'github' ||
+        remoteSkill.providerId === 'gitlab' ||
+        remoteSkill.providerId === 'git';
+      if (isGitSource) {
+        const hash = await fetchSkillFolderHash(
+          remoteSkill.sourceIdentifier,
+          url,
+          undefined,
+          remoteSkill.providerId,
+          remoteSkill.sourceUrl
+        );
         if (hash) skillFolderHash = hash;
       }
 
@@ -1868,11 +1877,18 @@ export async function runAdd(args: string[], options: AddOptions = {}): Promise<
         const skillDisplayName = getSkillDisplayName(skill);
         if (successfulSkillNames.has(skillDisplayName)) {
           try {
-            // Fetch the folder hash from GitHub Trees API
             let skillFolderHash = '';
             const skillPathValue = skillFiles[skill.name];
-            if (parsed.type === 'github' && skillPathValue) {
-              const hash = await fetchSkillFolderHash(normalizedSource, skillPathValue);
+            const isGitSource =
+              parsed.type === 'github' || parsed.type === 'gitlab' || parsed.type === 'git';
+            if (skillPathValue && isGitSource) {
+              const hash = await fetchSkillFolderHash(
+                normalizedSource,
+                skillPathValue,
+                undefined,
+                parsed.type,
+                parsed.url
+              );
               if (hash) skillFolderHash = hash;
             }
 

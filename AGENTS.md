@@ -82,6 +82,16 @@ Both `check` and `update` always send `forceRefresh: true`. This ensures the API
 
 **Tradeoff:** Slightly slower (GitHub API call per skill), but always accurate.
 
+### Hash Computation
+
+| Platform    | Method           | Granularity                                             |
+| ----------- | ---------------- | ------------------------------------------------------- |
+| GitHub      | GitHub Trees API | Folder-level (detects changes to specific skill folder) |
+| GitLab      | `git ls-remote`  | Repository-level (detects any change in the repo)       |
+| Generic git | `git ls-remote`  | Repository-level (detects any change in the repo)       |
+
+**Note:** GitLab and generic git types use repository-level hashing, meaning any change in the repository (even outside of the skill folder) will trigger an update. This is an acceptable trade-off since most skill repositories are standalone.
+
 ### Lock File Compatibility
 
 The lock file format is v3. Key field: `skillFolderHash` (GitHub tree SHA for the skill folder).
@@ -90,11 +100,11 @@ If reading an older lock file version, it's wiped. Users must reinstall skills t
 
 ## Key Integration Points
 
-| Feature          | Implementation                              |
-| ---------------- | ------------------------------------------- |
-| `skills add`     | `src/add.ts` - full implementation          |
-| `skills check`   | `POST /check-updates` API                   |
-| `skills update`  | `POST /check-updates` + reinstall per skill |
+| Feature         | Implementation                              |
+| --------------- | ------------------------------------------- |
+| `skills add`    | `src/add.ts` - full implementation          |
+| `skills check`  | `POST /check-updates` API                   |
+| `skills update` | `POST /check-updates` + reinstall per skill |
 
 ## Development
 

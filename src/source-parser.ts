@@ -291,7 +291,9 @@ function isWellKnownUrl(input: string): boolean {
     }
 
     // Don't match URLs that look like git repos (should be handled by git type)
-    if (input.endsWith('.git')) {
+    // Remove fragment before checking (e.g., https://example.com/repo.git#skill)
+    const urlWithoutFragment = input.split('#')[0]!;
+    if (urlWithoutFragment.endsWith('.git')) {
       return false;
     }
 
