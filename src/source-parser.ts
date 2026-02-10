@@ -255,9 +255,15 @@ export function parseSource(input: string): ParsedSource {
   }
 
   // Fallback: treat as direct git URL
+  // Check for fragment to extract subpath (e.g., https://example.com/repo.git#path/to/skill)
+  const parts = input.split('#', 2);
+  const gitUrl = parts[0]!;
+  const gitSubpath = parts[1];
+
   return {
     type: 'git',
-    url: input,
+    url: gitUrl,
+    subpath: gitSubpath,
   };
 }
 

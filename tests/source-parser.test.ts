@@ -203,6 +203,22 @@ describe('parseSource', () => {
       expect(result.type).toBe('git');
       expect(result.url).toBe('https://git.example.com/owner/repo.git');
     });
+
+    it('Git URL - custom host with fragment', () => {
+      const result = parseSource(
+        'https://git.apexsoft.com.cn/skills/mulit-test-skills.git#skills/live-ams-develop'
+      );
+      expect(result.type).toBe('git');
+      expect(result.url).toBe('https://git.apexsoft.com.cn/skills/mulit-test-skills.git');
+      expect(result.subpath).toBe('skills/live-ams-develop');
+    });
+
+    it('Git URL - custom host with fragment (simple path)', () => {
+      const result = parseSource('https://git.example.com/owner/repo.git#path/to/skill');
+      expect(result.type).toBe('git');
+      expect(result.url).toBe('https://git.example.com/owner/repo.git');
+      expect(result.subpath).toBe('path/to/skill');
+    });
   });
 });
 
