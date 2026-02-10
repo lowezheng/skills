@@ -1,7 +1,6 @@
 # fork from vercel-labs/skills
 
 1. [特性]增加gitlab或者其他git的skill源的更新支持，采用git ls-remote方式获取hashcode
-2. [限制] 该方式只是测试了单skill的git仓库
 
 # skills
 
